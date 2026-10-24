@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ปันชาร์จ · PanCharge (เดโม)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600&family=Anuphan:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F4F6FA;--surface:#FFFFFF;--surface2:#EEF1F7;--ink:#18203A;--muted:#5B6480;--line:#DCE1EC;
+  --sun:#FFB800;--sun-ink:#3A2A00;--go:#1F9D63;--busy:#D64545;
+  --water:#CFE3F5;--land:#E7ECF4;--road:#FFFFFF;--zone:#8A93AD;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1424;--surface:#182038;--surface2:#1F2844;--ink:#EEF1F8;--muted:#9AA3BD;--line:#2A3352;
+    --sun:#FFC633;--sun-ink:#2B1F00;--go:#3CC486;--busy:#F06A6A;
+    --water:#1C3350;--land:#141B30;--road:#28324E;--zone:#7C86A3;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1424;--surface:#182038;--surface2:#1F2844;--ink:#EEF1F8;--muted:#9AA3BD;--line:#2A3352;
+  --sun:#FFC633;--sun-ink:#2B1F00;--go:#3CC486;--busy:#F06A6A;
+  --water:#1C3350;--land:#141B30;--road:#28324E;--zone:#7C86A3;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);
+  font-family:"Anuphan","Noto Sans Thai","Leelawadee UI",Tahoma,sans-serif;font-size:16px;line-height:1.5;
+  -webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+h1,h2,h3{font-family:"Mitr","Anuphan",Tahoma,sans-serif;font-weight:500;margin:0;line-height:1.25}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.app{max-width:520px;margin:0 auto;padding:0 16px 104px}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);display:flex;align-items:center;gap:10px;padding:12px 0 10px}
+.logo{display:flex;align-items:center;gap:8px}
+.logo-mark{width:34px;height:34px;border-radius:11px;background:var(--sun);display:grid;place-items:center}
+.logo-mark svg{width:20px;height:20px}
+.logo h1{font-size:22px;font-weight:600;letter-spacing:.2px}
+.logo small{display:block;font-size:11px;color:var(--muted);line-height:1;margin-top:2px;font-family:"Anuphan",sans-serif}
+.demo-tag{margin-left:auto;font-size:12px;padding:4px 10px;border-radius:999px;border:1px dashed var(--muted);color:var(--muted)}
+
+.view{display:none}
+.view.on{display:block}
+
+/* search + chips */
+.search{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.search input{border:0;background:transparent;color:var(--ink);font:inherit;flex:1;min-width:0;outline:none}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 0 4px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+/* map */
+.map-wrap{position:relative;margin-top:8px;border-radius:22px;overflow:hidden;border:1px solid var(--line);background:var(--land)}
+.map-wrap svg{display:block;width:100%;height:auto}
+.zone-label{font-family:"Mitr",sans-serif;font-size:11px;fill:var(--zone)}
+.pin{cursor:pointer}
+.pin .halo{fill:var(--sun);opacity:.25}
+.pin.busy .body{fill:var(--surface);stroke:var(--busy)}
+.pin .body{fill:var(--sun);stroke:var(--ink);stroke-width:1.5}
+.pin .bolt{fill:var(--ink)}
+.pin.busy .bolt{fill:var(--busy)}
+.pin.mine .body{fill:var(--go)}
+.pin.sel .halo{opacity:.55}
+.pin:focus-visible{outline:none}
+.pin:focus-visible .body{stroke:var(--sun);stroke-width:3}
+.legend{position:absolute;left:10px;bottom:10px;display:flex;gap:10px;font-size:12px;background:var(--surface);border-radius:10px;padding:4px 10px;border:1px solid var(--line)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:middle}
+
+/* list */
+.sec-title{display:flex;align-items:baseline;justify-content:space-between;margin:20px 0 8px}
+.sec-title h2{font-size:18px}
+.sec-title span{font-size:13px;color:var(--muted)}
+.list{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px}
+.row .ic{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--surface2);font-size:20px}
+.row .meta{flex:1;min-width:0}
+.row .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .sub{font-size:13px;color:var(--muted)}
+.row .price{text-align:right;font-family:"Mitr",sans-serif;font-size:17px}
+.row .price small{display:block;font-family:"Anuphan",sans-serif;font-size:12px;color:var(--muted)}
+.status{font-size:12px;font-weight:600}
+.status.free{color:var(--go)}
+.status.busy{color:var(--busy)}
+
+/* stat blocks */
+.hero-card{background:var(--ink);color:var(--bg);border-radius:22px;padding:18px;margin-top:6px}
+.hero-card .lbl{font-size:13px;opacity:.75}
+.hero-card .big{font-family:"Mitr",sans-serif;font-size:38px;font-weight:500;line-height:1.1;margin:4px 0}
+.hero-card .note{font-size:13px;opacity:.75}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px}
+.stat b{display:block;font-family:"Mitr",sans-serif;font-size:20px;font-weight:500}
+.stat span{font-size:12px;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.bars{display:block;width:100%;height:auto}
+.bars text{font-size:10px;fill:var(--muted);font-family:"Anuphan",sans-serif}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:14px;padding:13px 18px;font-weight:600;font-size:16px}
+.btn.primary{background:var(--sun);color:var(--sun-ink)}
+.btn.dark{background:var(--ink);color:var(--bg)}
+.btn.ghost{background:transparent;border:1px solid var(--line)}
+.btn.block{width:100%}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0}
+.switch{position:relative;width:52px;height:30px;border-radius:999px;border:0;background:var(--line);flex:none}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:var(--surface);transition:transform .2s}
+.switch[aria-checked="true"]{background:var(--go)}
+.switch[aria-checked="true"]::after{transform:translateX(22px)}
+.stepper{display:flex;align-items:center;gap:10px}
+.stepper button{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);font-size:20px;line-height:1}
+.stepper output{font-family:"Mitr",sans-serif;font-size:18px;min-width:84px;text-align:center}
+
+.progress{height:10px;border-radius:999px;background:var(--surface2);overflow:hidden;margin:8px 0 4px}
+.progress i{display:block;height:100%;background:var(--sun);border-radius:999px}
+
+.badge{font-size:12px;border-radius:999px;padding:2px 10px;flex:none}
+.badge.ok{background:color-mix(in srgb,var(--go) 18%,transparent);color:var(--go)}
+.badge.wait{background:color-mix(in srgb,var(--sun) 25%,transparent);color:var(--ink)}
+.badge.no{background:var(--surface2);color:var(--muted)}
+
+.plans{display:grid;gap:10px}
+.plan{border:2px solid var(--line);background:var(--surface);border-radius:18px;padding:16px;text-align:left;width:100%}
+.plan[aria-pressed="true"]{border-color:var(--sun)}
+.plan h3{font-size:18px}
+.plan .p{font-family:"Mitr",sans-serif;font-size:26px;margin:4px 0}
+.plan ul{margin:6px 0 0;padding-left:20px;color:var(--muted);font-size:14px}
+.soon{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.soon .panel{padding:12px}
+.soon .panel b{display:block}
+.soon .panel span{font-size:13px;color:var(--muted)}
+
+/* tab bar */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabbar .in{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+.tab{border:0;background:transparent;padding:8px 2px 10px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;color:var(--muted)}
+.tab svg{width:24px;height:24px}
+.tab[aria-current="page"]{color:var(--ink);font-weight:600}
+.tab[aria-current="page"] .tb-ic{background:var(--sun);color:var(--sun-ink)}
+.tb-ic{border-radius:999px;padding:2px 14px;display:grid;place-items:center}
+
+/* sheet */
+.scrim{position:fixed;inset:0;z-index:40;background:rgba(10,14,28,.45);display:none}
+.scrim.on{display:block}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;max-width:520px;margin:0 auto;background:var(--surface);border-radius:22px 22px 0 0;
+  padding:10px 18px calc(20px + env(safe-area-inset-bottom,0px));max-height:88vh;overflow-y:auto;transform:translateY(105%);transition:transform .28s ease}
+.sheet.on{transform:none}
+.grab{width:40px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 12px}
+.sheet h2{font-size:21px}
+.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.kv div{background:var(--surface2);border-radius:12px;padding:8px 10px}
+.kv b{display:block;font-family:"Mitr",sans-serif;font-weight:500}
+.kv span{font-size:12px;color:var(--muted)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 14px}
+.tags span{font-size:13px;background:var(--surface2);border-radius:999px;padding:3px 10px}
+.opt-group{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}
+.opt{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:8px 14px;font-size:15px}
+.opt[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.sum{border-top:1px dashed var(--line);padding-top:12px;margin-top:4px}
+.sum div{display:flex;justify-content:space-between;font-size:15px;padding:2px 0}
+.sum .tot{font-family:"Mitr",sans-serif;font-size:22px;padding-top:6px}
+label.f{display:block;font-size:14px;color:var(--muted);margin:10px 0 4px}
+.inp{width:100%;font:inherit;color:var(--ink);background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+
+.qr-box{display:grid;place-items:center;gap:8px;margin:12px 0;text-align:center}
+.qr-box svg{width:200px;height:200px;background:#fff;border-radius:14px;padding:10px}
+.qr-box .amt{font-family:"Mitr",sans-serif;font-size:28px}
+
+.ring{display:grid;place-items:center;margin:8px 0 14px}
+.ring svg{width:210px;height:210px}
+.ring .val{font-family:"Mitr",sans-serif;font-size:34px;fill:var(--ink)}
+.ring .unit{font-size:13px;fill:var(--muted)}
+
+.empty{text-align:center;color:var(--muted);padding:28px 10px}
+.empty b{display:block;color:var(--ink);font-family:"Mitr",sans-serif;font-weight:500;font-size:17px;margin-bottom:4px}
+
+.toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);z-index:60;
+  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;max-width:90vw}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.muted{color:var(--muted)}
+.mt{margin-top:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="logo">
+      <div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="#18203A"/></svg></div>
+      <div><h1>ปันชาร์จ</h1><small>PanCharge</small></div>
+    </div>
+    <span class="demo-tag">เดโม ข้อมูลจำลอง</span>
+  </header>
+
+  <!-- ค้นหา -->
+  <section class="view" id="v-map" aria-label="ค้นหาที่ชาร์จ">
+    <div class="search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      <input id="q" type="search" placeholder="ค้นหาย่าน ร้าน หรือที่พัก" aria-label="ค้นหา">
+    </div>
+    <div class="chips" id="chips" role="group" aria-label="ตัวกรอง"></div>
+    <div class="map-wrap">
+      <svg id="map" viewBox="0 0 400 330" role="img" aria-label="แผนที่จำลอง กรุงเทพฯ นนทบุรี สมุทรปราการ"></svg>
+      <div class="legend"><span><i class="dot" style="background:var(--sun)"></i>ว่าง</span><span><i class="dot" style="background:var(--busy)"></i>มีคนใช้</span><span><i class="dot" style="background:var(--go)"></i>ของฉัน</span></div>
+    </div>
+    <div class="sec-title"><h2>ใกล้คุณ</h2><span id="count"></span></div>
+    <div class="list" id="list"></div>
+  </section>
+
+  <!-- การชาร์จของฉัน -->
+  <section class="view" id="v-trips" aria-label="การชาร์จของฉัน">
+    <div id="live"></div>
+    <div class="sec-title"><h2>ประวัติการชาร์จ</h2><span id="hist-sum"></span></div>
+    <div class="list" id="hist"></div>
+  </section>
+
+  <!-- เจ้าของจุด -->
+  <section class="view" id="v-host" aria-label="เจ้าของที่ชาร์จ">
+    <div class="hero-card">
+      <div class="lbl">รายได้เดือนนี้ จากบ้านสวนลาดกระบัง</div>
+      <div class="big" id="h-earn">฿0</div>
+      <div class="note">โอนเข้าบัญชีทุกวันจันทร์ · หักค่าบริการแพลตฟอร์มแล้ว</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="h-sess">0</b><span>ครั้งที่ชาร์จ</span></div>
+      <div class="stat"><b id="h-kwh">0</b><span>kWh ที่ขาย</span></div>
+      <div class="stat"><b id="h-util">0%</b><span>เวลาที่มีคนใช้</span></div>
+    </div>
+    <div class="sec-title"><h2>รายได้ 7 วันล่าสุด</h2><span>บาท</span></div>
+    <div class="panel"><svg class="bars" id="h-bars" viewBox="0 0 320 130" role="img" aria-label="กราฟรายได้รายวัน"></svg></div>
+    <div class="sec-title"><h2>ตั้งค่าที่ชาร์จ</h2></div>
+    <div class="panel">
+      <div class="toggle-row"><div><b>เปิดให้จอง</b><div class="muted" style="font-size:13px">ปิดเมื่อต้องการใช้เอง</div></div>
+        <button class="switch" id="h-open" role="switch" aria-checked="true" aria-label="เปิดให้จอง"></button></div>
+      <div class="toggle-row"><div><b>ราคาต่อ kWh</b><div class="muted" style="font-size:13px">ราคาแนะนำในย่านนี้ ฿5.5–7</div></div>
+        <div class="stepper"><button id="p-dn" aria-label="ลดราคา">−</button><output id="p-val">฿6.00</output><button id="p-up" aria-label="เพิ่มราคา">+</button></div></div>
+    </div>
+    <button class="btn dark block mt" id="add-btn">เพิ่มที่ชาร์จใหม่</button>
+    <div class="sec-title"><h2>การชาร์จล่าสุด</h2></div>
+    <div class="list" id="h-recent"></div>
+  </section>
+
+  <!-- ตัวแทนพื้นที่ -->
+  <section class="view" id="v-agent" aria-label="ตัวแทนพื้นที่">
+    <div class="hero-card">
+      <div class="lbl">ตัวแทนพื้นที่ เขตลาดกระบัง · รหัส PC-LKB-014</div>
+      <div class="big" id="a-earn">฿0</div>
+      <div class="note">ส่วนแบ่งเดือนนี้ จากจุดชาร์จที่คุณหามา</div>
+    </div>
+    <div class="panel mt">
+      <div style="display:flex;justify-content:space-between"><b>เป้าไตรมาสนี้</b><span id="a-goal-t"></span></div>
+      <div class="progress"><i id="a-goal"></i></div>
+      <div class="muted" style="font-size:13px">จุดที่มีคนชาร์จจริงครบ 10 ครั้ง นับเป็นจุดใช้งาน</div>
+    </div>
+    <button class="btn primary block mt" id="a-invite">คัดลอกลิงก์ชวนเจ้าของที่ชาร์จ</button>
+    <div class="sec-title"><h2>จุดที่คุณหามา</h2><span id="a-count"></span></div>
+    <div class="list" id="a-list"></div>
+    <div class="sec-title"><h2>พื้นที่เปิดรับตัวแทน</h2></div>
+    <div class="list" id="a-areas"></div>
+  </section>
+
+  <!-- สมาชิก -->
+  <section class="view" id="v-plan" aria-label="แพ็กเกจสมาชิก">
+    <div class="sec-title" style="margin-top:6px"><h2>เลือกแบบที่คุ้มกับคุณ</h2></div>
+    <div class="plans" id="plans" role="group" aria-label="แพ็กเกจ">
+      <button class="plan" data-plan="payg">
+        <h3>จ่ายตามใช้</h3><div class="p">฿0 <small class="muted" style="font-size:14px">/เดือน</small></div>
+        <ul><li>จ่ายราคาที่เจ้าของจุดตั้ง</li><li>จองล่วงหน้าได้ 30 นาที</li></ul>
+      </button>
+      <button class="plan" data-plan="driver">
+        <h3>สมาชิกคนขับ</h3><div class="p">฿299 <small class="muted" style="font-size:14px">/เดือน</small></div>
+        <ul><li>ลด ฿1 ทุก kWh ทุกจุด</li><li>ราคาพิเศษ 22:00–05:00</li><li>จองล่วงหน้าได้ 12 ชั่วโมง</li><li>เหมาะกับคนขับ Grab และ Bolt</li></ul>
+      </button>
+    </div>
+    <div class="panel mt" id="save-box"></div>
+    <div class="sec-title"><h2>บริการที่กำลังจะมา</h2></div>
+    <div class="soon">
+      <div class="panel"><b>🔋 กู้ภัยแบตหมด</b><span>ส่งแบตพกพาไปหาคุณ</span></div>
+      <div class="panel"><b>🛠 ช่าง EV</b><span>ช่างรับรองใกล้คุณ</span></div>
+      <div class="panel"><b>🧭 วางแผนเดินทาง</b><span>บอกจุดแวะชาร์จตามเส้นทาง</span></div>
+      <div class="panel"><b>🔌 ซื้อที่ชาร์จ</b><span>ติดตั้งแล้วเริ่มมีรายได้</span></div>
+    </div>
+    <p class="muted" style="font-size:12px;margin-top:16px">ราคาและตัวเลขทั้งหมดในเดโมเป็นค่าตัวอย่าง</p>
+  </section>
+</div>
+
+<nav class="tabbar" aria-label="เมนูหลัก"><div class="in" id="tabs"></div></nav>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><div class="grab"></div><div id="sheet-body"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const baht=n=>'฿'+n.toLocaleString('th-TH',{minimumFractionDigits:n%1?2:0,maximumFractionDigits:2});
+const TYPES={home:{t:'บ้าน',ic:'🏡'},shop:{t:'ร้านค้า',ic:'☕'},stay:{t:'ที่พัก',ic:'🛏'},condo:{t:'คอนโด',ic:'🏢'}};
+
+let chargers=[
+ {id:1,name:'บ้านสวนลาดกระบัง',area:'ลาดกระบัง',type:'home',x:318,y:150,kw:7.4,price:6,status:'free',rating:4.9,hours:'ทุกวัน 08:00–22:00',amen:['ที่จอดในบ้าน','กล้องวงจรปิด'],dist:1.2,mine:true},
+ {id:2,name:'คาเฟ่ปลั๊กอิน ร่มเกล้า',area:'ลาดกระบัง',type:'shop',x:292,y:118,kw:11,price:6.5,status:'free',rating:4.8,hours:'ทุกวัน 07:00–20:00',amen:['ร้านกาแฟ','ห้องน้ำ','Wi-Fi'],dist:2.4},
+ {id:3,name:'หมู่บ้านเพอร์เฟค อ่อนนุช',area:'ประเวศ',type:'condo',x:255,y:170,kw:7.4,price:5.5,status:'busy',rating:4.6,hours:'22:00–06:00 เท่านั้น',amen:['นิติฯ ดูแล','ที่จอด 24 ชม.'],dist:3.8},
+ {id:4,name:'ร้านข้าวมันไก่เจ๊หน่อย บางนา',area:'บางนา',type:'shop',x:232,y:226,kw:7.4,price:6,status:'free',rating:4.7,hours:'ทุกวัน 06:00–15:00',amen:['ร้านอาหาร','ห้องน้ำ'],dist:5.1},
+ {id:5,name:'บ้านคุณเอก ศรีนครินทร์',area:'บางนา',type:'home',x:270,y:212,kw:7.4,price:5.8,status:'free',rating:4.9,hours:'จ–ศ 09:00–17:00',amen:['จอดหน้าบ้าน'],dist:6.0},
+ {id:6,name:'โฮมสเตย์บางกระเจ้า',area:'สมุทรปราการ',type:'stay',x:178,y:262,kw:7.4,price:7,status:'free',rating:4.8,hours:'สำหรับแขกพัก + จองล่วงหน้า',amen:['ที่พัก','จักรยานให้เช่า'],dist:12.3},
+ {id:7,name:'คอนโดริเวอร์วิว พระราม 3',area:'ยานนาวา',type:'condo',x:150,y:208,kw:22,price:6.5,status:'busy',rating:4.5,hours:'ทุกวัน 24 ชม.',amen:['ลานจอดอาคาร','รปภ.'],dist:14.0},
+ {id:8,name:'คาเฟ่ใต้ต้นจามจุรี ปากเกร็ด',area:'นนทบุรี',type:'shop',x:92,y:48,kw:7.4,price:6.5,status:'free',rating:4.7,hours:'ทุกวัน 08:00–19:00',amen:['ร้านกาแฟ','ริมน้ำ'],dist:24.5},
+ {id:9,name:'บ้านครูแอน รัตนาธิเบศร์',area:'นนทบุรี',type:'home',x:70,y:92,kw:7.4,price:5.5,status:'free',rating:5.0,hours:'ทุกวัน 18:00–07:00',amen:['ชาร์จข้ามคืนได้'],dist:22.0},
+ {id:10,name:'ร้านส้มตำนัวร์ เมืองสมุทรปราการ',area:'สมุทรปราการ',type:'shop',x:240,y:290,kw:7.4,price:6,status:'busy',rating:4.6,hours:'ทุกวัน 10:00–21:00',amen:['ร้านอาหาร'],dist:15.2},
+ {id:11,name:'อพาร์ตเมนต์สุขุมวิท 77',area:'สวนหลวง',type:'condo',x:214,y:160,kw:11,price:6,status:'free',rating:4.6,hours:'ทุกวัน 24 ชม.',amen:['ลานจอด'],dist:7.4},
+ {id:12,name:'รีสอร์ตไร่ภูผา เขาใหญ่',area:'ต่างจังหวัด',type:'stay',x:null,y:null,kw:22,price:7.5,status:'free',rating:4.9,hours:'สำหรับแขกพัก',amen:['ที่พัก','ร้านอาหาร'],dist:165},
+ {id:13,name:'บ้านริมหาด หัวหิน',area:'ต่างจังหวัด',type:'home',x:null,y:null,kw:7.4,price:7,status:'free',rating:4.8,hours:'ทุกวัน 09:00–21:00',amen:['ใกล้ทะเล'],dist:198}
+];
+
+const store={get(k,d){try{const v=localStorage.getItem('pc_'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem('pc_'+k,JSON.stringify(v))}catch(e){}}};
+let state={filter:'all',q:'',sel:null,plan:store.get('plan','payg'),history:store.get('history',[]),live:null,hostOpen:true,hostPrice:6,extra:store.get('extra',[])};
+chargers=chargers.concat(state.extra);
+
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('on'),2200)}
+
+/* ---------- tabs ---------- */
+const TABS=[
+ ['map','ค้นหา','<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/>'],
+ ['trips','การชาร์จ','<path d="M13 3 5 13h6l-1 8 8-10h-6z"/>'],
+ ['host','เจ้าของจุด','<path d="M4 11 12 4l8 7v9H4z"/><path d="M10 20v-5h4v5"/>'],
+ ['agent','ตัวแทน','<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.6c2 .7 3.2 2.5 3.5 5.4"/>'],
+ ['plan','สมาชิก','<rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18"/>']
+];
+$('#tabs').innerHTML=TABS.map(([k,l,p])=>`<button class="tab" data-tab="${k}"><span class="tb-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">${p}</svg></span>${l}</button>`).join('');
+function go(tab){
+  if(!TABS.some(t=>t[0]===tab))tab='map';
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id==='v-'+tab));
+  document.querySelectorAll('.tab').forEach(b=>{if(b.dataset.tab===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+  if(location.hash.slice(1)!==tab)history.replaceState(null,'','#'+tab);
+  window.scrollTo(0,0);
+  if(tab==='trips')renderTrips();
+}
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('.tab');if(b)go(b.dataset.tab)});
+addEventListener('hashchange',()=>go(location.hash.slice(1)));
+
+/* ---------- map ---------- */
+const FILTERS=[['all','ทั้งหมด'],['free','ว่างตอนนี้'],['shop','ร้านค้า'],['home','บ้าน'],['condo','คอนโด'],['stay','ที่พัก'],['far','ต่างจังหวัด']];
+$('#chips').innerHTML=FILTERS.map(([k,l])=>`<button class="chip" data-f="${k}" aria-pressed="${k==='all'}">${l}</button>`).join('');
+$('#chips').addEventListener('click',e=>{const c=e.target.closest('.chip');if(!c)return;state.filter=c.dataset.f;document.querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed',x===c));renderMap()});
+$('#q').addEventListener('input',e=>{state.q=e.target.value.trim();renderMap()});
+
+const BASE=`
+<rect width="400" height="330" fill="var(--land)"/>
+<path d="M60 0 C 95 60, 70 100, 120 140 S 150 200, 120 240 S 150 300, 175 330" fill="none" stroke="var(--water)" stroke-width="16" stroke-linecap="round"/>
+<g stroke="var(--road)" stroke-width="6" fill="none" stroke-linecap="round">
+<path d="M0 120 H400"/><path d="M130 0 V330"/><path d="M140 170 C 220 175, 300 150, 400 160"/><path d="M180 140 L 260 330"/><path d="M240 60 L 330 330"/><path d="M0 70 C 80 80, 160 60, 240 60"/>
+</g>
+<g class="zone-label"><text x="20" y="28">นนทบุรี</text><text x="150" y="100">กรุงเทพฯ ชั้นใน</text><text x="318" y="105">ลาดกระบัง</text><text x="280" y="245">บางนา</text><text x="190" y="318">สมุทรปราการ</text><text x="235" y="190">ประเวศ</text></g>`;
+
+function visible(){
+  return chargers.filter(c=>{
+    const f=state.filter;
+    if(f==='free'&&c.status!=='free')return false;
+    if(f==='far'&&c.area!=='ต่างจังหวัด')return false;
+    if(['shop','home','condo','stay'].includes(f)&&c.type!==f)return false;
+    if(state.q&&!(c.name+c.area).includes(state.q))return false;
+    return true;
+  }).sort((a,b)=>a.dist-b.dist);
+}
+function renderMap(){
+  const vis=visible();
+  const pins=vis.filter(c=>c.x!=null).map(c=>`<g class="pin ${c.status==='busy'?'busy':''} ${c.mine?'mine':''} ${state.sel===c.id?'sel':''}" data-id="${c.id}" tabindex="0" role="button" aria-label="${c.name} ${c.status==='free'?'ว่าง':'มีคนใช้'}" transform="translate(${c.x} ${c.y})">
+  <circle class="halo" r="16"/><path class="body" d="M0 9 C -9 0,-11 -4,-11 -9 A11 11 0 0 1 11 -9 C 11 -4, 9 0, 0 9Z"/><path class="bolt" d="M1.5 -16 -4 -8h3.5l-1 6 5.5-8H.5z"/></g>`).join('');
+  $('#map').innerHTML=BASE+'<circle cx="300" cy="140" r="6" fill="#3B82F6" stroke="#fff" stroke-width="3"/>'+pins;
+  $('#count').textContent=vis.length+' จุด';
+  $('#list').innerHTML=vis.length?vis.map(rowHTML).join(''):`<div class="empty"><b>ไม่พบที่ชาร์จที่ตรงกับตัวกรอง</b>ลองล้างคำค้นหา หรือเลือก “ทั้งหมด”</div>`;
+}
+function rowHTML(c){
+  return `<button class="row" data-id="${c.id}"><span class="ic" aria-hidden="true">${TYPES[c.type].ic}</span>
+  <span class="meta"><span class="name" style="display:block">${c.name}</span>
+  <span class="sub">${TYPES[c.type].t} · ${c.kw} kW · ${c.dist<50?c.dist.toFixed(1)+' กม.':c.area} · ★ ${c.rating}</span><br>
+  <span class="status ${c.status}">${c.mine?'ที่ชาร์จของคุณ':c.status==='free'?'ว่างตอนนี้':'มีคนใช้อยู่'}</span></span>
+  <span class="price">${baht(c.price)}<small>ต่อ kWh</small></span></button>`;
+}
+function onPick(e){const t=e.target.closest('[data-id]');if(t)openCharger(+t.dataset.id)}
+$('#map').addEventListener('click',onPick);
+$('#map').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onPick(e)}});
+$('#list').addEventListener('click',onPick);
+
+/* ---------- sheet ---------- */
+function openSheet(html){$('#sheet-body').innerHTML=html;$('#scrim').classList.add('on');$('#sheet').classList.add('on');setTimeout(()=>{const f=$('#sheet').querySelector('button,input');f&&f.focus()},250)}
+function closeSheet(){$('#scrim').classList.remove('on');$('#sheet').classList.remove('on');state.sel=null;renderMap()}
+$('#scrim').addEventListener('click',closeSheet);
+addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#sheet').classList.contains('on'))closeSheet()});
+
+function memberDisc(){return state.plan==='driver'?1:0}
+function openCharger(id){
+  const c=chargers.find(x=>x.id===id);if(!c)return;state.sel=id;renderMap();
+  const busy=c.status==='busy';
+  openSheet(`<h2 id="sheet-title">${c.name}</h2>
+  <div class="muted">${TYPES[c.type].t} · ${c.area} · ★ ${c.rating}</div>
+  <div class="kv"><div><b>${c.kw} kW</b><span>AC Type 2</span></div><div><b>${baht(c.price)}</b><span>ต่อ kWh</span></div><div><b>${c.dist<50?c.dist.toFixed(1)+' กม.':'—'}</b><span>ระยะทาง</span></div></div>
+  <div><b>เวลาเปิดให้ชาร์จ</b><div class="muted">${c.hours}</div></div>
+  <div class="tags">${c.amen.map(a=>`<span>${a}</span>`).join('')}</div>
+  ${c.mine?`<p class="muted">นี่คือที่ชาร์จของคุณ ดูรายได้ได้ที่แท็บเจ้าของจุด</p><button class="btn dark block" id="to-host">ไปที่เจ้าของจุด</button>`:
+  busy?`<p class="muted">มีคนชาร์จอยู่ คาดว่าว่างอีกประมาณ 1 ชั่วโมง</p><button class="btn ghost block" id="notify">แจ้งเตือนเมื่อว่าง</button>`:
+  `<button class="btn primary block" id="book">จองและชาร์จ</button>`}`);
+  const b=$('#book');if(b)b.onclick=()=>openBooking(c);
+  const n=$('#notify');if(n)n.onclick=()=>{toast('จะแจ้งเตือนเมื่อ '+c.name+' ว่าง');closeSheet()};
+  const h=$('#to-host');if(h)h.onclick=()=>{closeSheet();go('host')};
+}
+
+function openBooking(c){
+  let when='now',hrs=2;
+  const draw=()=>{
+    const kwh=+(c.kw*hrs*0.9).toFixed(1);
+    const unit=Math.max(c.price-memberDisc()-(state.plan==='driver'&&when==='night'?0.5:0),1);
+    const energy=+(kwh*unit).toFixed(2), fee=+(energy*0.05).toFixed(2), tot=+(energy+fee).toFixed(2);
+    openSheet(`<h2 id="sheet-title">จองที่ ${c.name}</h2>
+    <label class="f">เริ่มชาร์จ</label>
+    <div class="opt-group" data-k="when">${[['now','ตอนนี้'],['1h','อีก 1 ชม.'],['night','คืนนี้ 22:00']].map(([k,l])=>`<button class="opt" data-v="${k}" aria-pressed="${when===k}">${l}</button>`).join('')}</div>
+    <label class="f">ระยะเวลา</label>
+    <div class="opt-group" data-k="hrs">${[1,2,4,8].map(h=>`<button class="opt" data-v="${h}" aria-pressed="${hrs===h}">${h===8?'ข้ามคืน 8 ชม.':h+' ชม.'}</button>`).join('')}</div>
+    <div class="sum">
+      <div><span>ไฟประมาณ ${kwh} kWh × ${baht(unit)}</span><span>${baht(energy)}</span></div>
+      <div><span>ค่าบริการแอป 5%</span><span>${baht(fee)}</span></div>
+      ${state.plan==='driver'?'<div style="color:var(--go)"><span>ส่วนลดสมาชิกคนขับ</span><span>ใช้แล้ว</span></div>':''}
+      <div class="tot"><span>ประมาณ</span><span>${baht(tot)}</span></div>
+      <div class="muted" style="font-size:13px">จ่ายตามไฟที่ใช้จริง ถ้าหยุดก่อน ระบบคืนเงินส่วนที่เหลือ</div>
+    </div>
+    <button class="btn primary block mt" id="pay">ชำระด้วย PromptPay ${baht(tot)}</button>`);
+    $('#sheet-body').querySelectorAll('.opt-group').forEach(g=>g.addEventListener('click',e=>{const o=e.target.closest('.opt');if(!o)return;if(g.dataset.k==='when')when=o.dataset.v;else hrs=+o.dataset.v;draw()}));
+    $('#pay').onclick=()=>openQR(c,{kwh,unit,tot,hrs});
+  };
+  draw();
+}
+function qrSVG(seed){
+  let s=seed*9301+49297;const r=()=>(s=(s*9301+49297)%233280)/233280;
+  const N=25;let out='';
+  const finder=(x,y)=>`<rect x="${x}" y="${y}" width="7" height="7" fill="#000"/><rect x="${x+1}" y="${y+1}" width="5" height="5" fill="#fff"/><rect x="${x+2}" y="${y+2}" width="3" height="3" fill="#000"/>`;
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    const inF=(x<8&&y<8)||(x>N-9&&y<8)||(x<8&&y>N-9);
+    if(!inF&&r()>.52)out+=`<rect x="${x}" y="${y}" width="1" height="1" fill="#000"/>`;
+  }
+  return `<svg viewBox="0 0 ${N} ${N}" shape-rendering="crispEdges" role="img" aria-label="QR ตัวอย่าง">${out}${finder(0,0)}${finder(N-7,0)}${finder(0,N-7)}</svg>`;
+}
+function openQR(c,b){
+  openSheet(`<h2 id="sheet-title">สแกนจ่ายด้วย PromptPay</h2>
+  <div class="qr-box">${qrSVG(c.id+Date.now()%97)}<div class="amt">${baht(b.tot)}</div><div class="muted">ปันชาร์จ (เดโม) · QR ตัวอย่าง ใช้จ่ายจริงไม่ได้</div></div>
+  <button class="btn primary block" id="paid">ฉันชำระแล้ว เริ่มชาร์จ</button>
+  <button class="btn ghost block mt" id="cancel">ยกเลิก</button>`);
+  $('#paid').onclick=()=>{closeSheet();startSession(c,b)};
+  $('#cancel').onclick=closeSheet;
+}
+
+/* ---------- live session ---------- */
+function startSession(c,b){
+  if(state.live)clearInterval(state.live.timer);
+  c.status='busy';
+  state.live={c,b,mins:0,timer:setInterval(tick,1000)};
+  toast('เริ่มชาร์จแล้ว');go('trips');renderMap();
+}
+function tick(){
+  const L=state.live;if(!L)return;
+  L.mins+=3;
+  if(L.mins>=L.b.hrs*60){finishSession();return}
+  if(!$('#v-trips').classList.contains('on'))return;
+  drawLive();
+}
+function liveNums(){const L=state.live;const kwh=Math.min(L.c.kw*0.9*L.mins/60,L.b.kwh);return{kwh,cost:kwh*L.b.unit*1.05,pct:kwh/L.b.kwh}}
+function drawLive(){
+  const L=state.live;
+  if(!L){$('#live').innerHTML='';return}
+  const {kwh,cost,pct}=liveNums();const R=86,C=2*Math.PI*R;
+  $('#live').innerHTML=`<div class="panel" style="margin-top:6px">
+  <div style="display:flex;justify-content:space-between;align-items:center"><b>${L.c.name}</b><span class="badge ok">กำลังชาร์จ</span></div>
+  <div class="ring"><svg viewBox="0 0 210 210" aria-label="ชาร์จแล้ว ${kwh.toFixed(1)} kWh">
+   <circle cx="105" cy="105" r="${R}" fill="none" stroke="var(--surface2)" stroke-width="14"/>
+   <circle cx="105" cy="105" r="${R}" fill="none" stroke="var(--sun)" stroke-width="14" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-pct)}" transform="rotate(-90 105 105)"/>
+   <text x="105" y="104" text-anchor="middle" class="val">${kwh.toFixed(1)}</text><text x="105" y="128" text-anchor="middle" class="unit">kWh จาก ${L.b.kwh}</text></svg></div>
+  <div class="stats" style="margin-top:0"><div class="stat"><b>${baht(+cost.toFixed(2))}</b><span>ค่าใช้จ่ายตอนนี้</span></div><div class="stat"><b>${Math.floor(L.mins/60)}:${String(L.mins%60).padStart(2,'0')}</b><span>ชั่วโมง:นาที</span></div><div class="stat"><b>${L.c.kw}</b><span>kW</span></div></div>
+  <p class="muted" style="font-size:12px">เดโมเร่งเวลา 1 วินาที = 3 นาที</p>
+  <button class="btn dark block" id="stop">หยุดชาร์จ</button></div>`;
+  $('#stop').onclick=finishSession;
+}
+function finishSession(){
+  const L=state.live;if(!L)return;clearInterval(L.timer);
+  const {kwh,cost}=liveNums();
+  const rec={name:L.c.name,type:L.c.type,kwh:+kwh.toFixed(1),cost:+cost.toFixed(2),charged:+(L.b.tot).toFixed(2),date:new Date().toLocaleDateString('th-TH',{day:'numeric',month:'short'})};
+  state.history.unshift(rec);store.set('history',state.history.slice(0,30));
+  L.c.status='free';state.live=null;renderMap();renderTrips();
+  const refund=Math.max(rec.charged-rec.cost,0);
+  openSheet(`<h2 id="sheet-title">ชาร์จเสร็จแล้ว</h2>
+  <div class="kv"><div><b>${rec.kwh}</b><span>kWh</span></div><div><b>${baht(rec.cost)}</b><span>จ่ายจริง</span></div><div><b>${baht(+refund.toFixed(2))}</b><span>คืนเงิน</span></div></div>
+  <p class="muted">ให้คะแนน ${rec.name}</p>
+  <div class="opt-group" id="stars">${[1,2,3,4,5].map(n=>`<button class="opt" data-v="${n}" aria-pressed="false" aria-label="${n} ดาว">${'★'.repeat(n)}</button>`).join('')}</div>
+  <button class="btn primary block" id="done">เสร็จสิ้น</button>`);
+  $('#stars').addEventListener('click',e=>{const o=e.target.closest('.opt');if(!o)return;$('#stars').querySelectorAll('.opt').forEach(x=>x.setAttribute('aria-pressed',x===o))});
+  $('#done').onclick=()=>{closeSheet();toast('ขอบคุณที่ใช้ปันชาร์จ')};
+}
+function renderTrips(){
+  drawLive();
+  const h=state.history;
+  $('#hist-sum').textContent=h.length?h.reduce((a,b)=>a+b.kwh,0).toFixed(1)+' kWh':'';
+  $('#hist').innerHTML=h.length?h.map(r=>`<div class="row"><span class="ic" aria-hidden="true">${TYPES[r.type].ic}</span><span class="meta"><span class="name" style="display:block">${r.name}</span><span class="sub">${r.date} · ${r.kwh} kWh</span></span><span class="price">${baht(r.cost)}</span></div>`).join('')
+   :(state.live?'':`<div class="empty"><b>ยังไม่มีการชาร์จ</b>ไปที่แท็บค้นหา แล้วเลือกจุดที่ว่างเพื่อจองครั้งแรก</div>`);
+}
+
+/* ---------- host ---------- */
+const hostDays=[{d:'จ.',v:142},{d:'อ.',v:96},{d:'พ.',v:188},{d:'พฤ.',v:121},{d:'ศ.',v:205},{d:'ส.',v:264},{d:'อา.',v:230}];
+const hostRecent=[['ทะเบียน กข 4512 · BYD Dolphin','18.2 kWh','฿104.40'],['ทะเบียน 7กร 889 · MG4','12.6 kWh','฿72.20'],['ทะเบียน ฌญ 120 · Neta V','9.1 kWh','฿52.10'],['ทะเบียน 2ขค 3301 · ORA Good Cat','21.0 kWh','฿120.40']];
+function renderHost(){
+  const total=4180;$('#h-earn').textContent=baht(total);$('#h-sess').textContent='46';$('#h-kwh').textContent='731';$('#h-util').textContent=state.hostOpen?'38%':'0%';
+  const max=Math.max(...hostDays.map(x=>x.v));
+  $('#h-bars').innerHTML=hostDays.map((x,i)=>{const h=x.v/max*90,X=12+i*44;return `<rect x="${X}" y="${100-h}" width="28" height="${h}" rx="6" fill="${i===5?'var(--sun)':'var(--line)'}"/><text x="${X+14}" y="${96-h}" text-anchor="middle">${x.v}</text><text x="${X+14}" y="118" text-anchor="middle">${x.d}</text>`}).join('');
+  $('#p-val').textContent='฿'+state.hostPrice.toFixed(2);
+  $('#h-recent').innerHTML=hostRecent.map(r=>`<div class="row"><span class="ic" aria-hidden="true">🚗</span><span class="meta"><span class="name" style="display:block">${r[0]}</span><span class="sub">${r[1]}</span></span><span class="price">${r[2]}</span></div>`).join('');
+}
+$('#h-open').onclick=e=>{state.hostOpen=!state.hostOpen;e.currentTarget.setAttribute('aria-checked',state.hostOpen);const m=chargers.find(c=>c.mine);if(m)m.status=state.hostOpen?'free':'busy';renderHost();renderMap();toast(state.hostOpen?'เปิดให้จองแล้ว':'ปิดรับจองชั่วคราว')};
+const setPrice=d=>{state.hostPrice=Math.min(10,Math.max(4,+(state.hostPrice+d).toFixed(2)));const m=chargers.find(c=>c.mine);if(m)m.price=state.hostPrice;renderHost();renderMap()};
+$('#p-up').onclick=()=>setPrice(.25);$('#p-dn').onclick=()=>setPrice(-.25);
+$('#add-btn').onclick=()=>{
+  openSheet(`<h2 id="sheet-title">เพิ่มที่ชาร์จใหม่</h2>
+  <label class="f" for="n-name">ชื่อที่แสดงในแอป</label><input class="inp" id="n-name" placeholder="เช่น ร้านกาแฟบ้านสวน">
+  <label class="f" for="n-type">ประเภท</label><select class="inp" id="n-type"><option value="shop">ร้านค้า</option><option value="home">บ้าน</option><option value="condo">คอนโด / หมู่บ้าน</option><option value="stay">ที่พัก</option></select>
+  <label class="f" for="n-kw">กำลังชาร์จ</label><select class="inp" id="n-kw"><option>7.4</option><option>11</option><option>22</option></select>
+  <label class="f" for="n-price">ราคาต่อ kWh (บาท)</label><input class="inp" id="n-price" type="number" step="0.25" value="6">
+  <p class="muted" style="font-size:13px">ทีมงานจะนัดตรวจที่ชาร์จและเชื่อมระบบให้ฟรี ก่อนเปิดให้จองจริง</p>
+  <button class="btn primary block" id="n-save">เพิ่มที่ชาร์จ</button>`);
+  $('#n-save').onclick=()=>{
+    const name=$('#n-name').value.trim();if(!name){$('#n-name').focus();toast('ใส่ชื่อที่ชาร์จก่อน');return}
+    const c={id:Date.now(),name,area:'ลาดกระบัง',type:$('#n-type').value,x:260+Math.random()*110,y:90+Math.random()*90,kw:+$('#n-kw').value,price:+$('#n-price').value||6,status:'free',rating:5,hours:'รอทีมงานตรวจ',amen:['จุดใหม่'],dist:+(1+Math.random()*4).toFixed(1),mine:true};
+    chargers.push(c);state.extra.push(c);store.set('extra',state.extra);closeSheet();renderMap();toast('เพิ่ม '+name+' แล้ว ดูได้บนแผนที่');
+  };
+};
+
+/* ---------- agent ---------- */
+const agentPts=[['คาเฟ่ปลั๊กอิน ร่มเกล้า','ok','ใช้งาน · 62 ครั้ง'],['บ้านสวนลาดกระบัง','ok','ใช้งาน · 46 ครั้ง'],['หอพักบ้านสุข ฉลองกรุง','ok','ใช้งาน · 18 ครั้ง'],['ร้านซ่อมมอเตอร์ไซค์ช่างต้น','wait','ชาร์จแล้ว 4 ครั้ง'],['มินิมาร์ท หลังสถาบันฯ','wait','รอตรวจหน้างาน'],['บ้านคุณนิด เคหะร่มเกล้า','no','ยังไม่มีการชาร์จ'],['คอนโดลาดกระบังพาร์ค','ok','ใช้งาน · 27 ครั้ง'],['ร้านอาหารริมบึง','ok','ใช้งาน · 13 ครั้ง'],['อู่สีรถยนต์ช่างเล็ก','ok','ใช้งาน · 11 ครั้ง']];
+const areas=[['เขตลาดกระบัง','คุณถือสิทธิ์อยู่','ok'],['เขตบางนา','ว่าง เปิดรับสมัคร','wait'],['เขตประเวศ','มีตัวแทนแล้ว','no'],['นนทบุรี','ว่าง เปิดรับสมัคร','wait'],['สมุทรปราการ','มีตัวแทนแล้ว','no'],['นครราชสีมา (เขาใหญ่)','ว่าง เปิดรับสมัคร','wait'],['ประจวบคีรีขันธ์ (หัวหิน)','ว่าง เปิดรับสมัคร','wait']];
+function renderAgent(){
+  const active=agentPts.filter(p=>p[1]==='ok').length;
+  $('#a-earn').textContent=baht(1265);
+  $('#a-goal-t').textContent=active+' / 10 จุด';$('#a-goal').style.width=active*10+'%';
+  $('#a-count').textContent=agentPts.length+' จุด';
+  const lab={ok:'ใช้งาน',wait:'กำลังเริ่ม',no:'รอชาร์จแรก'};
+  $('#a-list').innerHTML=agentPts.map(p=>`<div class="row"><span class="meta"><span class="name" style="display:block">${p[0]}</span><span class="sub">${p[2]}</span></span><span class="badge ${p[1]}">${lab[p[1]]}</span></div>`).join('');
+  $('#a-areas').innerHTML=areas.map(a=>`<div class="row"><span class="meta"><span class="name" style="display:block">${a[0]}</span><span class="sub">${a[1]}</span></span>${a[2]==='wait'?'<button class="btn ghost" style="padding:7px 12px;font-size:14px" data-apply="'+a[0]+'">สมัคร</button>':`<span class="badge ${a[2]}">${a[2]==='ok'?'ของคุณ':'เต็มแล้ว'}</span>`}</div>`).join('');
+}
+$('#a-areas').addEventListener('click',e=>{const b=e.target.closest('[data-apply]');if(b)toast('ส่งใบสมัครตัวแทน '+b.dataset.apply+' แล้ว')});
+$('#a-invite').onclick=()=>{const link='https://pancharge.com/host?ref=PC-LKB-014';try{navigator.clipboard.writeText(link).then(()=>toast('คัดลอกลิงก์ชวนแล้ว'),()=>toast(link))}catch(e){toast(link)}};
+
+/* ---------- plans ---------- */
+function renderPlans(){
+  document.querySelectorAll('.plan').forEach(p=>p.setAttribute('aria-pressed',p.dataset.plan===state.plan));
+  const monthly=300;// kWh ตัวอย่างของคนขับต่อเดือน
+  $('#save-box').innerHTML=state.plan==='driver'
+   ?`<b>คุณเป็นสมาชิกคนขับ</b><div class="muted" style="font-size:14px">ถ้าชาร์จเดือนละ ${monthly} kWh จะประหยัดประมาณ ${baht(monthly-299)} ต่อเดือน หลังหักค่าสมาชิก</div>`
+   :`<b>ชาร์จเกิน 300 kWh ต่อเดือน?</b><div class="muted" style="font-size:14px">สมัครสมาชิกคนขับจะคุ้มกว่า ส่วนลดใช้ทันทีกับการจองครั้งถัดไป</div>`;
+}
+$('#plans').addEventListener('click',e=>{const p=e.target.closest('.plan');if(!p)return;state.plan=p.dataset.plan;store.set('plan',state.plan);renderPlans();toast(state.plan==='driver'?'สมัครสมาชิกคนขับแล้ว (เดโม)':'เปลี่ยนเป็นจ่ายตามใช้')});
+
+/* ---------- init ---------- */
+renderMap();renderHost();renderAgent();renderPlans();renderTrips();
+go(location.hash.slice(1)||'map');
+})();
+</script>
+</body>
+</html>
